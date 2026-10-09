@@ -186,14 +186,4 @@ with tab4:
 
     if "COMPRAR" in sinal or "COMPRA" in sinal: st.success(f"### {sinal}")
     elif "VENDER" in sinal or "VENDA" in sinal: st.error(f"### {sinal}")
-    else: st.info(f"### {sinal}")
-
-    promo=f"👑 ALPHA ULTIMATE V1-V6: {coin_id.upper()} ${price:.4f} {ch24:+.2f}% RSI {rsi_now:.0f} Fear {fng_val} {sinal} | gmdny.streamlit.app #CriptoGOD"
-    st.code(promo)
-    cA,cB,cC=st.columns(3)
-    cA.link_button("🐦 Postar X", f"https://twitter.com/intent/tweet?text={promo[:250]}")
-    cB.download_button("📥 CSV 30d", hist.to_csv(index=False), f"{coin_id}_ultimate.csv")
-    if cC.button("🤖 Testar Modo Robô"):
-        st.query_params["auto"]="1"; st.rerun()
-
-st.success("✅ ULTIMATE V1-V6
+    else: st.info(f"### {sinal}"
