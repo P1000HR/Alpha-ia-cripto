@@ -4,172 +4,113 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-st.set_page_config(page_title="Alpha V5 GOD", page_icon="👑", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Alpha V6 AUTO", page_icon="🤖", layout="wide")
 
-st.markdown("""
-<style>
-.stApp {background:#050507; color:#eee;}
-.god {font-size:54px; font-weight:900; background: linear-gradient(90deg,#00ff88,#00ccff); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
-.card {background:#15151a; border:1px solid #2a2a35; padding:16px; border-radius:16px; margin-bottom:12px;}
-</style>
-""", unsafe_allow_html=True)
+st.markdown("<h1>🤖 ALPHA V6 - AUTO POST GOD</h1>", unsafe_allow_html=True)
+st.caption("Watchlist + Auto Post 9h + Modo Robô | VERSÃO FINAL")
 
-st.markdown('<div class="god">👑 ALPHA V5 GOD MODE</div>', unsafe_allow_html=True)
-st.caption("Fear & Greed + Meme Radar + Trending + AI Chat | Terminal profissional")
-
-SYMBOL_MAP = {"BTC":"bitcoin","ETH":"ethereum","SOL":"solana","DOGE":"dogecoin","SHIB":"shiba-inu","PEPE":"pepe","BONK":"bonk","WIF":"dogwifcoin","FLOKI":"floki","BRETT":"brett"}
-
-def calc_rsi(s, p=14):
-    d=s.diff(); g=d.where(d>0,0).rolling(p).mean(); l=-d.where(d<0,0).rolling(p).mean()
-    return 100-(100/(1+g/l))
-
-@st.cache_data(ttl=600)
-def get_fear_greed():
-    try:
-        r=requests.get("https://api.alternative.me/fng/?limit=1", timeout=8).json()
-        return int(r['data'][0]['value']), r['data'][0]['value_classification']
-    except: return 50,"Neutral"
+SYMBOL_MAP={"BTC":"bitcoin","ETH":"ethereum","SOL":"solana","DOGE":"dogecoin","SHIB":"shiba-inu","PEPE":"pepe","BONK":"bonk","WIF":"dogwifcoin"}
 
 @st.cache_data(ttl=300)
-def get_trending():
+def get_price(cid):
     try:
-        r=requests.get("https://api.coingecko.com/api/v3/search/trending", timeout=10).json()
-        return r['coins']
-    except: return []
+        r=requests.get(f"https://api.coingecko.com/api/v3/coins/{cid}", timeout=10).json()['market_data']
+        return r['current_price']['usd'], r['price_change_percentage_24h'], r['market_cap']['usd']
+    except: return None
 
 @st.cache_data(ttl=600)
 def get_markets():
-    url="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&price_change_percentage=24h"
-    try: return requests.get(url, timeout=15).json()
+    url="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&per_page=10&order=market_cap_desc"
+    try: return requests.get(url, timeout=10).json()
     except: return []
 
-@st.cache_data(ttl=300)
-def get_coin_full(cid):
-    try:
-        url=f"https://api.coingecko.com/api/v3/coins/{cid}/market_chart?vs_currency=usd&days=30"
-        hist=pd.DataFrame(requests.get(url, timeout=12).json()['prices'], columns=['t','price'])
-        hist['date']=pd.to_datetime(hist['t'], unit='ms')
-        hist['MA7']=hist['price'].rolling(7).mean()
-        hist['MA25']=hist['price'].rolling(25).mean()
-        hist['RSI']=calc_rsi(hist['price'])
-        info=requests.get(f"https://api.coingecko.com/api/v3/coins/{cid}", timeout=10).json()['market_data']
-        return hist, info
-    except: return None, None
+# MODO AUTO PARA O ROBO (quando acessa?auto=1)
+params = st.query_params
+is_auto = params.get("auto") == "1"
 
-# SIDEBAR GOD
-markets = get_markets()
-fg_val, fg_txt = get_fear_greed()
-trending = get_trending()
-
-with st.sidebar:
-    st.metric("😱 Fear & Greed", f"{fg_val}/100", fg_txt)
-    if fg_val<25: st.error("MEDO EXTREMO - Oportunidade de compra")
-    elif fg_val>75: st.warning("GANÂNCIA EXTREMA - Cuidado com topo")
-
-    st.divider()
-    entrada=st.text_input("Moeda:", value="bitcoin")
-    coin_id=SYMBOL_MAP.get(entrada.upper(), entrada.lower())
-
-    st.divider()
-    st.subheader("🔥 Trending AGORA")
-    for t in trending[:6]:
-        item=t['item']
-        st.write(f"**{item['symbol']}** - {item['name']} (rank {item['market_cap_rank']})")
-
-    st.divider()
-    st.subheader("💎 Meme Radar (<$0.01 + >10% hoje)")
-    if markets:
-        memes=[m for m in markets if m['current_price']<0.01 and (m.get('price_change_percentage_24h') or 0)>10]
-        for m in memes[:8]:
-            st.write(f"{m['symbol'].upper():6} ${m['current_price']:.6f} {m['price_change_percentage_24h']:+.1f}%")
-
-# MAIN COIN
-res = get_coin_full(coin_id)
-if res[0] is None:
-    st.error(f"{coin_id} não encontrada")
+if is_auto:
+    # Gera texto puro para o robô do GitHub Actions ler
+    markets = get_markets()
+    txt = f"🤖 ALPHA AUTO {datetime.now().strftime('%d/%m %H:%M')}:\n"
+    for m in markets[:5]:
+        txt+=f"{m['symbol'].upper()} ${m['current_price']} {m.get('price_change_percentage_24h',0):+.2f}%\n"
+    txt+="#AlphaV6 #Cripto"
+    st.code(txt)
+    st.write("AUTO_MODE_TEXT:" + txt.replace("\n"," | "))
     st.stop()
-hist, md = res
-price=md['current_price']['usd']
-ch24=md['price_change_percentage_24h']
-ch7=md.get('price_change_percentage_7d',0)
-rsi_now=hist['RSI'].iloc[-1]
 
-c1,c2,c3 = st.columns([2,1,1])
-with c1:
-    st.markdown(f"## {coin_id.upper()} ${price:,.8f}" if price<0.01 else f"## {coin_id.upper()} ${price:,.2f}")
-    st.write(f"Market Cap ${md['market_cap']['usd']/1e9:.2f}B | Vol ${md['total_volume']['usd']/1e9:.2f}B | ATH ${md['ath']['usd']:,.2f}")
-with c2:
-    st.metric("24h", f"{ch24:.2f}%")
-    st.metric("RSI", f"{rsi_now:.0f}", "Sobrecompra" if rsi_now>70 else "Sobrevenda" if rsi_now<30 else "Neutro")
-with c3:
-    # OPORTUNIDADE SCORE
-    score=0
-    if rsi_now<35: score+=30
-    if ch24<-8: score+=20
-    if fg_val<30: score+=25
-    if price<hist['MA25'].iloc[-1]: score+=15
-    st.metric("👑 GOD Score", f"{score}/90", "ALTA Oportunidade" if score>60 else "Neutro")
+# MODO NORMAL
+st.sidebar.header("⭐ Minha Watchlist (5 moedas)")
+watchlist_default=["bitcoin","ethereum","solana","pepe","dogecoin"]
+watchlist=st.sidebar.multiselect("Escolha 5:", [m['id'] for m in get_markets()] + list(SYMBOL_MAP.values()), default=watchlist_default, max_selections=5)
 
-t1,t2,t3,t4 = st.tabs(["📈 Gráfico GOD", "🤖 IA Insights", "💼 Simulador Whale", "💬 Alpha Chat"])
+if st.sidebar.button("💾 Salvar Watchlist"):
+    st.sidebar.success("Salva! (Na V6 fica na memória da sessão)")
 
-with t1:
-    st.line_chart(hist.set_index('date')[['price','MA7','MA25']], height=400)
-    st.caption("Preto=Preço | Azul=MA7 | Vermelho=MA25 | Cruzamento MA7>MA25 = Alta")
+# DASHBOARD
+if watchlist:
+    cols=st.columns(len(watchlist))
+    total_val=0
+    promos=[]
+    for i, cid in enumerate(watchlist):
+        data=get_price(cid)
+        if data:
+            price,ch24,mcap=data
+            promos.append(f"{cid.upper()} ${price} {ch24:+.1f}%")
+            with cols[i]:
+                st.metric(cid.upper(), f"${price:,.4f}" if price<1 else f"${price:,.2f}", f"{ch24:.2f}%")
+                total_val+=price
 
-with t2:
-    colA,colB = st.columns(2)
-    with colA:
-        st.markdown(f"""
-        <div class="card">
-        <b>🧠 Análise IA Automática</b><br><br>
-        • RSI: {rsi_now:.0f} - {"Sobrecomprado, risco de correção" if rsi_now>70 else "Sobrevendido, possível reversão" if rsi_now<30 else "Neutro, tendência segue"}<br>
-        • vs MA25: {"Acima da média (força)" if price>hist['MA25'].iloc[-1] else "Abaixo da média (fraqueza)"}<br>
-        • Fear & Greed {fg_val} ({fg_txt}) - {"Mercado com medo, bons pontos de entrada" if fg_val<40 else "Mercado ganancioso, realizar lucros"}<br>
-        • Volatilidade 7d: {(hist['price'].pct_change().std()*100):.2f}%<br>
-        </div>
-        """, unsafe_allow_html=True)
-    with colB:
-        # previsão
-        x=np.arange(len(hist.tail(10))); y=hist.tail(10)['price'].values
-        coef=np.polyfit(x,y,1)
-        alvo=y[-1]+coef[0]*7
-        st.markdown(f"""
-        <div class="card">
-        <b>🔮 Previsão 7 dias (modelo linear)</b><br><br>
-        Tendência: <b>{"ALTA 📈" if coef[0]>0 else "BAIXA 📉"}</b><br>
-        Alvo estimado: <b>${alvo:,.6f}</b><br>
-        Retorno estimado: <b>{(alvo/price-1)*100:+.2f}%</b><br><br>
-        ⚠️ Não é conselho financeiro, apenas estatística.
-        </div>
-        """, unsafe_allow_html=True)
+    st.divider()
+    # GRAFICO COMPARADO
+    st.subheader("📈 Comparativo Watchlist 7 dias (normalizado %)")
+    try:
+        chart_data=pd.DataFrame()
+        for cid in watchlist[:3]:
+            hist=requests.get(f"https://api.coingecko.com/api/v3/coins/{cid}/market_chart?vs_currency=usd&days=7", timeout=10).json()['prices']
+            df=pd.DataFrame(hist, columns=['t','price'])
+            df['date']=pd.to_datetime(df['t'], unit='ms')
+            df=df.set_index('date')
+            df[f'{cid} %']=(df['price']/df['price'].iloc[0]-1)*100
+            chart_data=pd.concat([chart_data, df[[f'{cid} %']]], axis=1)
+        st.line_chart(chart_data, height=350)
+    except:
+        st.write("Gráfico carregando...")
 
-with t3:
-    st.subheader("🐋 Simulador Whale")
-    aporte=st.slider("Se investisse quanto?", 100, 10000, 1000, step=100)
-    qtd_token=aporte/price
-    st.write(f"Com ${aporte} você compra {qtd_token:,.2f} {coin_id.upper()}")
-    st.write(f"Se voltar no ATH (${md['ath']['usd']:,.2f}), seu valor seria: **${qtd_token*md['ath']['usd']:,.2f}** ({(md['ath']['usd']/price-1)*100:+.1f}%)")
-    st.bar_chart(pd.DataFrame({"valor":[aporte, qtd_token*md['ath']['usd']]}, index=["Hoje","No ATH"]))
+    # TEXTO AUTO
+    st.subheader("📢 Texto Auto 9h")
+    promo_text=f"🚀 ALPHA V6 AUTO {datetime.now().strftime('%d/%m')}: {' | '.join(promos[:4])} | Watchlist GOD | #Cripto #AlphaAuto"
+    st.code(promo_text)
+    c1,c2=st.columns(2)
+    c1.link_button("🐦 Postar Agora no X", f"https://twitter.com/intent/tweet?text={promo_text[:250]}")
+    if c2.button("🤖 Testar Modo Robô"):
+        st.switch_page(f"?auto=1")
 
-with t4:
-    st.subheader("💬 Alpha Chat (simulado IA)")
-    pergunta=st.text_input("Pergunte: 'Devo comprar agora?', 'Qual meme vai bombar?'")
-    if pergunta:
-        if "comprar" in pergunta.lower():
-            resp = f"Baseado em RSI {rsi_now:.0f} e Fear {fg_val}, {'é bom momento de compra escalonada' if rsi_now<40 and fg_val<40 else 'melhor aguardar correção, mercado ganancioso' if rsi_now>65 else 'mercado neutro, compre 50% agora e 50% se cair 10%'}."
-        elif "meme" in pergunta.lower():
-            top_meme = sorted([m for m in markets if m['current_price']<1], key=lambda x: x.get('price_change_percentage_24h',0) or 0, reverse=True)[:3] if markets else []
-            resp = f"Meme coins bombando hoje: {', '.join([m['symbol'].upper()+' '+str(round(m.get('price_change_percentage_24h',0),1))+'%' for m in top_meme])}. Foco em volume alto."
-        else:
-            resp = f"{coin_id.upper()} está com tendência {'de alta' if ch24>0 else 'de baixa'} de {ch24:.2f}% 24h, RSI {rsi_now:.0f}. Minha leitura: { 'acumular' if rsi_now<40 else 'realizar parcialmente' if rsi_now>70 else 'hold'}."
-        st.info(f"🤖 Alpha: {resp}")
-
-# FOOTER PROMO
 st.divider()
-promo=f"👑 GOD ALERT: {coin_id.upper()} ${price:.6f} {ch24:+.2f}% | RSI {rsi_now:.0f} | Fear {fg_val} ({fg_txt}) | GOD Score {score}/90 | #AlphaV5 #CriptoGOD"
-col1,col2,col3=st.columns(3)
-col1.code(promo)
-col2.download_button("📥 Exportar 30d CSV", hist.to_csv(index=False), f"{coin_id}_V5.csv")
-col3.link_button("🐦 Postar no X", f"https://twitter.com/intent/tweet?text={promo[:250]}")
+st.markdown("""
+### 🤖 COMO ATIVAR O POST AUTOMÁTICO 9H DA MANHÃ (PASSO FINAL)
 
-st.success("V5 GOD no ar! Agora você tem terminal melhor que muita corretora.")
+**Você vai criar um robô no GitHub que posta sozinho:**
+
+1. No seu GitHub `Alpha-ia-cripto`, clica em **Add file > Create new file**
+2. No nome do arquivo, digita EXATAMENTE: `.github/workflows/daily.yml`
+3. Cola esse código dentro:
+```yaml
+name: Alpha Auto Post 9h
+on:
+  schedule:
+    - cron: '0 12 * * *' # 9h Brasil = 12h UTC
+  workflow_dispatch:
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Alpha Data
+        run: |
+          curl -s "https://SEU-LINK-AQUI.streamlit.app/?auto=1" > auto.txt
+          cat auto.txt
+      - name: Telegram Post (opcional)
+        if: false
+        run: |
+          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT }}&text=ALPHA AUTO POST"
