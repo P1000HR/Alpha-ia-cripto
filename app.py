@@ -221,4 +221,4 @@ else:
 
 promo=f"ULTIMATE V1-V8: {coin_id.upper()} {bin_symbol} {price_display:.4f} {ch24:+.2f}% RSI {rsi_display:.0f} {sinal}"
 st.code(promo)
-st.write("VERSAO 8.2 FIX
+st.write("VERSAO 8.4 FIX
