@@ -196,4 +196,4 @@ with tab4:
     if cC.button("🤖 Testar Modo Robô"):
         st.query_params["auto"]="1"; st.rerun()
 
-st.success("✅ ULTIMATE V1-V6 CARREGADO - Você tem TODAS as versões em 1 só app!")
+st.success("✅ ULTIMATE V1-V6
