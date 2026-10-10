@@ -220,4 +220,4 @@ else:
     st.info(sinal)
 
 promo=f"ULTIMATE V1-V8: {coin_id.upper()} {bin_symbol} {price_display:.4f} {ch24:+.2f}% RSI {rsi_display:.0f} {sinal}"
-st.code(promo)
+st.code(promo
