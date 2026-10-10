@@ -1,4 +1,4 @@
-ort streamlit as st
+t streamlit as st
 import requests
 import pandas as pd
 import plotly.graph_objects as go
